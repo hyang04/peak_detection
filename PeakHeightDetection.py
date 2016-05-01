@@ -415,8 +415,6 @@ def findHighestPeakAndRTForZValues(peakvalley, data, timey, peaklist, RT, coordi
                                 else:
                                     print('', end='')
                             else:
-                                if data[indy] == 0:
-                                    print("divide by zero")
                                 division = peakHeight/data[indy]
                                 if division > .25:
                                     rightboundary = [timey[index], data[index]]
@@ -544,32 +542,6 @@ def findHighestPeakAndRTForZValues(peakvalley, data, timey, peaklist, RT, coordi
             print('', end='')
     return peakHeight
             
-def processVariousZ(moverzxl, rowOfCellObjects, trialz, realzvalue, rtxl, runnamexl, re, leftBoundary, rightBoundary, peakvalley, peakvalleythings):
-    importantstuff = {}
-    peptide = sheet[moverzxl + str(rowOfCellObjects)].value
-    NEEDED = [peptide]
-    coordinate = sheet[moverzxl + str(rowOfCellObjects)]
-    peptidemass = float(sheet[moverzxl + str(rowOfCellObjects)].value)
-    experimentz = float(trialz)
-    neutralmass = (peptidemass * float(realzvalue)) - (1.007825 * float(realzvalue))
-    trialpeptidemass = (neutralmass + 1.007825 * experimentz) / experimentz
-    # print("Row ", rowOfCellObjects, ", peptide mass = ", peptidemass, ", neutral mass = ", neutralmass, ", trial z = ", trialz, ", trial peptide mass", trialpeptidemass)
-    peptideRT = sheet[rtxl + str(rowOfCellObjects)].value
-    filename = sheet[runnamexl + str(rowOfCellObjects)].value
-    runnameregex = re.compile(r'[^_]*')
-    runname = runnameregex.search(filename)
-    realrunname = runname.group()
-    # if rowOfCellObjects == 8 and trialz == 6:
-    #    print("start debugging")
-    peptideresult = GetChroData(trialpeptidemass, float(leftBoundary), float(rightBoundary), realrunname) #compare to line 16
-    timey = list(peptideresults[0])
-    data = list(peptideresults[1])
-    peakDetection = DoPeakDetection(data, timey, peptideRT) # compare to line 54
-    
-    highestpeaknrt = findHighestPeakAndRTForZValues(peakvalley, data, timey, peakvalleythings, peptideRT, coordinate, importantstuff)
-    return highestpeaknrt
-    # peakarea = PeakArea.PeakArea(importantstuff, data, timey)
-
 #prepping the excel file and all its variables
 os.chdir(sys.argv[1]) # changing directory to your cwd
 wb = openpyxl.load_workbook(sys.argv[2]) # opening excel file for XL peptide 
@@ -645,11 +617,8 @@ for rowOfCellObjects in range(4, highestRow+1):
     rightBoundary = highestpeaknrt[1]
     realzPeakHeight = highestpeaknrt[2]
 
-    for trialz in range(2, 7):
-        if trialz == realzvalue:
-            continue
-
-        # processVariousZ(moverzxl, rowOfCellObjects, trialz, realzvalue, rtxl, runnamexl, re, leftBoundary, rightBoundary, peakvalley, peakvalleythings)
+    trialz = realzvalue - 1
+    while trialz >= 2:
         importantstuff = {}
         peptide = sheet[moverzxl + str(rowOfCellObjects)].value
         NEEDED = [peptide]
@@ -672,7 +641,39 @@ for rowOfCellObjects in range(4, highestRow+1):
         peakDetection = DoPeakDetection(data, timey, peptideRT) # compare to line 54
     
         highestpeaknrt = findHighestPeakAndRTForZValues(peakvalley, data, timey, peakvalleythings, peptideRT, coordinate, importantstuff)
+        if highestpeaknrt < realzPeakHeight * 0.15:
+            break
+        trialz = trialz - 1
 
+    trialz = realzvalue + 1
+    while trialz < 7:
+        importantstuff = {}
+        peptide = sheet[moverzxl + str(rowOfCellObjects)].value
+        NEEDED = [peptide]
+        coordinate = sheet[moverzxl + str(rowOfCellObjects)]
+        peptidemass = float(sheet[moverzxl + str(rowOfCellObjects)].value)
+        experimentz = float(trialz)
+        neutralmass = (peptidemass * float(realzvalue)) - (1.007825 * float(realzvalue))
+        trialpeptidemass = (neutralmass + 1.007825 * experimentz) / experimentz
+        # print("Row ", rowOfCellObjects, ", peptide mass = ", peptidemass, ", neutral mass = ", neutralmass, ", trial z = ", trialz, ", trial peptide mass", trialpeptidemass)
+        peptideRT = sheet[rtxl + str(rowOfCellObjects)].value
+        filename = sheet[runnamexl + str(rowOfCellObjects)].value
+        runnameregex = re.compile(r'[^_]*')
+        runname = runnameregex.search(filename)
+        realrunname = runname.group()
+        # if rowOfCellObjects == 8 and trialz == 6:
+        #    print("start debugging")
+        peptideresult = GetChroData(trialpeptidemass, float(leftBoundary), float(rightBoundary), realrunname) #compare to line 16
+        timey = list(peptideresults[0])
+        data = list(peptideresults[1])
+        peakDetection = DoPeakDetection(data, timey, peptideRT) # compare to line 54
+    
+        highestpeaknrt = findHighestPeakAndRTForZValues(peakvalley, data, timey, peakvalleythings, peptideRT, coordinate, importantstuff)
+        if highestpeaknrt < realzPeakHeight * 0.15:
+            break
+        trialz = trialz + 1
+
+    
     # trialz = realzvalue - 1
     # while trialz >= 2:    
     #     trialzPeakHeight = processVariousZ(moverzxl, rowOfCellObjects, trialz, realzvalue, rtxl, runnamexl, re, leftBoundary, rightBoundary, peakvalley, peakvalleythings)
